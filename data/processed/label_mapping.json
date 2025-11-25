@@ -1,0 +1,9 @@
+{
+  "0": "takeoff",
+  "1": "land",
+  "2": "forward",
+  "3": "backward",
+  "4": "left",
+  "5": "right",
+  "6": "spin"
+}

@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+.env
+.venv/
+.DS_Store
+.idea/
+.vscode/
+*.log
+models/*.pt
+models/*.onnx
+data/raw/
+data/processed/train/
+data/processed/val/
