@@ -1,0 +1,9 @@
+{
+  "backward": 0,
+  "forward": 1,
+  "land": 2,
+  "left": 3,
+  "right": 4,
+  "spin": 5,
+  "takeoff": 6
+}

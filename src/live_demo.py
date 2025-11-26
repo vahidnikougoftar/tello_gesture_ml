@@ -1,4 +1,4 @@
-"""Simple webcam loop for experimenting with the gesture classifier."""
+"""Simple webcam loop for experimenting with the TensorFlow gesture classifier."""
 from __future__ import annotations
 
 import argparse
@@ -6,40 +6,26 @@ import json
 from pathlib import Path
 
 import cv2
-import torch
-from torchvision import transforms
-
-from model import GestureCNN
+import numpy as np
+import tensorflow as tf
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run live gesture predictions.")
-    parser.add_argument("--model-path", type=Path, default=Path("models/gesture_cnn.pt"))
+    parser.add_argument("--model-path", type=Path, default=Path("models/gesture_cnn.keras"))
     parser.add_argument("--label-path", type=Path, default=Path("models/class_to_idx.json"))
-    parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--camera", type=int, default=0)
+    parser.add_argument("--image-size", type=int, default=64)
     return parser.parse_args()
 
 
-def load_model(model_path: Path, class_to_idx_path: Path, device: torch.device) -> tuple[GestureCNN, dict[int, str]]:
-    checkpoint = torch.load(model_path, map_location=device)
-    class_to_idx = checkpoint.get("class_to_idx")
-    if class_to_idx is None and class_to_idx_path.exists():
-        with class_to_idx_path.open("r", encoding="utf-8") as fp:
-            class_to_idx = json.load(fp)
-    if class_to_idx is None:
-        raise RuntimeError("Could not determine class mappings.")
-
-    num_classes = len(class_to_idx)
-    model = GestureCNN(num_classes=num_classes)
-    model.load_state_dict(checkpoint["model_state"])
-    model.to(device)
-    model.eval()
-    idx_to_class = {idx: label for label, idx in class_to_idx.items()}
-    return model, idx_to_class
+def load_labels(mapping_path: Path) -> dict[int, str]:
+    with mapping_path.open("r", encoding="utf-8") as fp:
+        class_to_idx = json.load(fp)
+    return {idx: label for label, idx in class_to_idx.items()}
 
 
-def crop_center(frame):
+def crop_center(frame: np.ndarray) -> np.ndarray:
     height, width = frame.shape[:2]
     size = min(height, width)
     start_y = (height - size) // 2
@@ -47,17 +33,17 @@ def crop_center(frame):
     return frame[start_y : start_y + size, start_x : start_x + size]
 
 
+def preprocess_frame(frame: np.ndarray, image_size: int) -> np.ndarray:
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    resized = cv2.resize(rgb, (image_size, image_size))
+    tensor = resized.astype("float32") / 255.0
+    return np.expand_dims(tensor, axis=0)
+
+
 def main() -> None:
     args = parse_args()
-    device = torch.device("cuda" if (args.device == "auto" and torch.cuda.is_available()) else args.device)
-    model, idx_to_label = load_model(args.model_path, args.label_path, device)
-    preprocess = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Resize((64, 64)),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
+    model = tf.keras.models.load_model(args.model_path)
+    idx_to_label = load_labels(args.label_path)
 
     cap = cv2.VideoCapture(args.camera)
     if not cap.isOpened():
@@ -70,14 +56,12 @@ def main() -> None:
             if not ret:
                 break
             square = crop_center(frame)
-            rgb = cv2.cvtColor(square, cv2.COLOR_BGR2RGB)
-            tensor = preprocess(rgb).unsqueeze(0).to(device)
-            with torch.no_grad():
-                logits = model(tensor)
-                probs = torch.softmax(logits, dim=1)
-                conf, pred = torch.max(probs, dim=1)
-            label = idx_to_label.get(pred.item(), "unknown")
-            text = f"{label}: {conf.item():.2f}"
+            tensor = preprocess_frame(square, args.image_size)
+            probs = model.predict(tensor, verbose=0)[0]
+            pred_idx = int(np.argmax(probs))
+            conf = float(probs[pred_idx])
+            label = idx_to_label.get(pred_idx, "unknown")
+            text = f"{label}: {conf:.2f}"
             cv2.putText(square, text, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 4)
             cv2.putText(square, text, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
             cv2.imshow("Gesture", square)

@@ -1,6 +1,6 @@
 # Tello Gesture ML
 
-Prototype pipeline for classifying a small set of drone gestures from webcam frames. It currently relies on the [Sign Language Digits Dataset](https://github.com/ardamavi/Sign-Language-Digits-Dataset) to train an image classifier that maps seven static hand poses to drone commands (`takeoff`, `land`, `forward`, `backward`, `left`, `right`, `spin`). The laptop webcam can then be used for quick experiments by feeding frames through the trained network.
+Prototype pipeline for classifying a small set of drone gestures from webcam frames. It currently relies on the [Sign Language Digits Dataset](https://github.com/ardamavi/Sign-Language-Digits-Dataset) to train a TensorFlow image classifier that maps seven static hand poses to drone commands (`takeoff`, `land`, `forward`, `backward`, `left`, `right`, `spin`). The laptop webcam can then be used for quick experiments by feeding frames through the trained network.
 
 ## Getting started
 
@@ -36,14 +36,14 @@ Only digits `0-6` are used and re-labeled into drone commands:
 python src/train.py --data-dir data/processed --epochs 15 --batch-size 64
 ```
 
-The script saves the best checkpoint to `models/gesture_cnn.pt` alongside `models/class_to_idx.json` for inference. TensorBoard logs are not included yet but the script prints per-epoch metrics.
+The script saves the best checkpoint to `models/gesture_cnn.keras` alongside `models/class_to_idx.json` for inference. TensorBoard logs are not included yet but the script prints per-epoch metrics.
 
 ## Quick webcam loop
 
 After training, you can run a simple webcam loop that crops the center of the frame and feeds it through the trained model:
 
 ```bash
-python src/live_demo.py --model-path models/gesture_cnn.pt --label-path models/class_to_idx.json
+python src/live_demo.py --model-path models/gesture_cnn.keras --label-path models/class_to_idx.json
 ```
 
 This is intentionally barebones—you will still need to implement drone control logic (e.g., via `djitellopy`) and a more robust ROI extraction strategy for reliable control.
