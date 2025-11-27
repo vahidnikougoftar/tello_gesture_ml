@@ -38,6 +38,16 @@ python src/train.py --data-dir data/processed --epochs 15 --batch-size 64
 
 The script saves the best checkpoint to `models/gesture_cnn.keras` alongside `models/class_to_idx.json` for inference. TensorBoard logs are not included yet but the script prints per-epoch metrics.
 
+## Evaluation
+
+Measure accuracy, precision, recall, F1, and generate a confusion matrix plot on the validation split:
+
+```bash
+python src/test.py --data-dir data/processed --split val --model-path models/gesture_cnn.keras
+```
+
+By default the confusion matrix figure is stored in `models/confusion_matrix_val.png`.
+
 ## Quick webcam loop
 
 After training, you can run a simple webcam loop that crops the center of the frame and feeds it through the trained model:

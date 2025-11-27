@@ -13,7 +13,7 @@ if os.path.exists(input_filepath):
     filepath=input_filepath
 else:
     print('file did not exist. showing IMG_4040 instead')
-    filepath = r'data/processed/train/takeoff/IMG_4040.JPG'
+    filepath = r'../data/processed/train/takeoff/IMG_4040.JPG'
 
 img = cv2.imread(filepath)
 
