@@ -38,6 +38,30 @@ python src/train.py --data-dir data/processed --epochs 15 --batch-size 64
 
 The script saves the best checkpoint to `models/gesture_cnn.keras` alongside `models/class_to_idx.json` for inference. TensorBoard logs are not included yet but the script prints per-epoch metrics.
 
+### Model variants and pretrained checkpoints
+
+Model builders live under `src/build_models`. Use `--model-version` to pick an internal architecture:
+
+```bash
+python src/train.py --model-version model_v2
+```
+
+To start from a local `.keras` checkpoint, point `--pretrained-path` at the file:
+
+```bash
+python src/train.py --pretrained-path models/mobilevit_finetune.keras
+```
+
+You can also download `.keras` weights directly from Hugging Face:
+
+```bash
+python src/train.py \
+  --hf-repo keras-io/mobilevit-xxs \
+  --hf-filename mobilevit_xxs_classifier.keras
+```
+
+An optional `--hf-cache-dir` overrides the default Hugging Face cache location.
+
 ## Evaluation
 
 Measure accuracy, precision, recall, F1, and generate a confusion matrix plot on the validation split:

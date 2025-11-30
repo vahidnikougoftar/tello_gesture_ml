@@ -4,10 +4,11 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Optional
 
 import tensorflow as tf
 
-from model import build_gesture_model
+from build_models import get_model_builder, list_available_models
 
 
 def load_datasets(data_dir: Path, batch_size: int, image_size=(64, 64), seed: int = 42):
@@ -43,7 +44,72 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--output-dir", type=Path, default=Path("models"))
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--model-version",
+        type=str,
+        choices=list_available_models(),
+        default="model_v1",
+        help="Which internal architecture to use.",
+    )
+    parser.add_argument(
+        "--pretrained-path",
+        type=Path,
+        default=None,
+        help="Path to an existing .keras model to fine-tune.",
+    )
+    parser.add_argument(
+        "--hf-repo",
+        type=str,
+        default=None,
+        help="Hugging Face repo id for downloading a .keras checkpoint.",
+    )
+    parser.add_argument(
+        "--hf-filename",
+        type=str,
+        default=None,
+        help="Target filename inside the Hugging Face repo.",
+    )
+    parser.add_argument(
+        "--hf-cache-dir",
+        type=Path,
+        default=None,
+        help="Optional cache directory for Hugging Face downloads.",
+    )
     return parser.parse_args()
+
+
+def resolve_pretrained(args) -> Optional[Path]:
+    if args.pretrained_path and (args.hf_repo or args.hf_filename):
+        raise ValueError("Choose either --pretrained-path or the Hugging Face options, not both.")
+    if args.hf_repo or args.hf_filename:
+        if not (args.hf_repo and args.hf_filename):
+            raise ValueError("Both --hf-repo and --hf-filename must be provided together.")
+        from huggingface_hub import hf_hub_download
+
+        download_path = hf_hub_download(
+            repo_id=args.hf_repo,
+            filename=args.hf_filename,
+            cache_dir=str(args.hf_cache_dir) if args.hf_cache_dir else None,
+        )
+        return Path(download_path)
+    return args.pretrained_path
+
+
+def prepare_model(num_classes: int, args) -> tf.keras.Model:
+    pretrained = resolve_pretrained(args)
+    if pretrained:
+        print(f"Loading pretrained model from {pretrained}")
+        model = tf.keras.models.load_model(pretrained)
+    else:
+        builder = get_model_builder(args.model_version)
+        model = builder(num_classes=num_classes)
+    output_units = model.output_shape[-1]
+    if output_units is None or output_units != num_classes:
+        raise ValueError(
+            f"Model output units ({output_units}) do not match dataset classes ({num_classes}). "
+            "Adjust the model head or ensure the checkpoint matches the dataset."
+        )
+    return model
 
 
 def main() -> None:
@@ -51,7 +117,7 @@ def main() -> None:
     train_ds, val_ds, class_names = load_datasets(args.data_dir, args.batch_size, seed=args.seed)
     class_to_idx = {name: idx for idx, name in enumerate(class_names)}
 
-    model = build_gesture_model(num_classes=len(class_names))
+    model = prepare_model(num_classes=len(class_names), args=args)
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=args.lr),
         loss=tf.keras.losses.SparseCategoricalCrossentropy(),
