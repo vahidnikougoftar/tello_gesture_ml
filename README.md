@@ -37,6 +37,7 @@ python src/train.py --data-dir data/processed --epochs 15 --batch-size 64
 ```
 
 The script saves the best checkpoint to `models/gesture_cnn.keras` alongside `models/class_to_idx.json` for inference. TensorBoard logs are not included yet but the script prints per-epoch metrics.
+After each training run, `training_curves.png` is written to the specified `--output-dir`, showing train vs. validation accuracy/loss so you can catch overfitting.
 
 ### Model variants and pretrained checkpoints
 
@@ -44,6 +45,12 @@ Model builders live under `src/build_models`. Use `--model-version` to pick an i
 
 ```bash
 python src/train.py --model-version model_v2
+```
+
+`model_v3` swaps the CNN for a PCA + Logistic Regression pipeline; it fits PCA/logistic once, exports a frozen `.keras` model, and prints one-epoch metrics/plots:
+
+```bash
+python src/train.py --model-version model_v3
 ```
 
 To start from a local `.keras` checkpoint, point `--pretrained-path` at the file:
@@ -61,6 +68,14 @@ python src/train.py \
 ```
 
 An optional `--hf-cache-dir` overrides the default Hugging Face cache location.
+
+Need to troubleshoot labels? Add `--debug-data` to print the inferred class order plus sample batches:
+
+```bash
+python src/train.py --debug-data --output-dir models
+```
+
+Sample grids are exported to `models/debug_samples/debug_samples_{train,val}.png`. Adjust `--debug-num-images` for more/less samples.
 
 ## Evaluation
 

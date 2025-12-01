@@ -7,6 +7,7 @@ from typing import Callable, Dict
 MODEL_REGISTRY: Dict[str, str] = {
     "model_v1": "build_models.model_v1:build_gesture_model",
     "model_v2": "build_models.model_v2:build_gesture_model",
+    "model_v3": "build_models.model_v3:build_gesture_model",
 }
 
 

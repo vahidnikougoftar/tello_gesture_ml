@@ -9,8 +9,8 @@ def build_gesture_model(num_classes: int, input_shape: tuple[int, int, int] = (6
     data_augmentation = tf.keras.Sequential(
         [
             tf.keras.layers.RandomFlip("horizontal"),
-            tf.keras.layers.RandomRotation(0.08),
-            tf.keras.layers.RandomZoom(0.15),
+            tf.keras.layers.RandomRotation(0.1),
+            tf.keras.layers.RandomZoom(0.1),
         ],
         name="augmentation_v2",
     )
@@ -18,7 +18,7 @@ def build_gesture_model(num_classes: int, input_shape: tuple[int, int, int] = (6
     inputs = tf.keras.Input(shape=input_shape)
     x = data_augmentation(inputs)
     x = tf.keras.layers.Rescaling(1.0 / 255.0)(x)
-    for filters in (32, 128):
+    for filters in (8,16,64):
         x = tf.keras.layers.Conv2D(filters, 3, padding="same", activation=None)(x)
         x = tf.keras.layers.BatchNormalization()(x)
         x = tf.keras.layers.Activation("relu")(x)
